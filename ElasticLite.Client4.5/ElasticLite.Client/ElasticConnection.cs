@@ -39,44 +39,26 @@ namespace ElasticLite.Client
         }
         public string Get(string command, string jsonData = null)
         {
-            return null;
+            return ExecuteRequest("GET", command, jsonData);
         }
         public string Head(string command, string jsonData = null)
         {
-            return null;
+            return ExecuteRequest("HEAD", command, jsonData);
         }
         public string Post(string command, string jsonData = null)
         {
-            return null;
+            return ExecuteRequest("Post", command, jsonData);
         }
         public string Put(string command, string jsonData = null)
         {
-            return null;
+            return ExecuteRequest("Put", command, jsonData);
         }
-        private OperationException HandleWebException(WebException webException)
-        {
-
-            string message = webException.Message;
-            WebResponse response = webException.Response;
-            if (response != null)
-            {
-                using (Stream responseStream = response.GetResponseStream())
-                {
-                    message = new StreamReader(responseStream, detectEncodingFromByteOrderMarks: true).ReadToEnd();
-                }
-            }
-            int statusCode = 0;
-            if (response is HttpWebResponse)
-            {
-                statusCode = (int)((HttpWebResponse)response).StatusCode;
-            }
-            return new OperationException(message, statusCode, webException);
-        }
-        private OperationResult ExecuteRequest(string method, string command, string jsonData)
+        private string ExecuteRequest(string method, string command, string jsonData)
         {
             try
             {
-                string uri = CommandToUri(command);
+                string uri = connections[random.Next(connections.Count())];
+                uri = uri.TrimEnd('/') + "/" + command.TrimStart('/');
                 HttpWebRequest request = CreateRequest(method, uri);
                 if (!string.IsNullOrEmpty(jsonData))
                 {
@@ -90,7 +72,7 @@ namespace ElasticLite.Client
                 using (WebResponse response = request.GetResponse())
                 {
                     string result = new StreamReader(response.GetResponseStream()).ReadToEnd();
-                    return new OperationResult(result);
+                    return result;
                 }
             }
             catch (WebException ex)
@@ -100,7 +82,6 @@ namespace ElasticLite.Client
         }
         protected virtual HttpWebRequest CreateRequest(string method, string uri)
         {
-            
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
             request.Accept = "application/json";
             request.ContentType = "application/json";
