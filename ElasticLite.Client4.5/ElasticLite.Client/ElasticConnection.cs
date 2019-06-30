@@ -35,7 +35,7 @@ namespace ElasticLite.Client
         public IWebProxy Proxy { get; set; }
         public string Delete(string command, string jsonData = null)
         {
-            return null;
+            return ExecuteRequest("DELETE", command, jsonData);
         }
         public string Get(string command, string jsonData = null)
         {
