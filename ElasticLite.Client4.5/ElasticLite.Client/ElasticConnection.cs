@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ElasticLite.Client
 {
@@ -13,6 +12,7 @@ namespace ElasticLite.Client
         private Random random = new Random();
         public List<string> connections = new List<string>();
         public List<Uri> uri = new List<Uri>();
+        public int? index = null;
         public ElasticConnection(string url, int timeout = 6000)
         {
             uri.Add(new Uri(url));
@@ -35,29 +35,44 @@ namespace ElasticLite.Client
         public IWebProxy Proxy { get; set; }
         public string Delete(string command, string jsonData = null)
         {
-            return ExecuteRequest("DELETE", command, jsonData);
+            return ExecuteRequest(null, "DELETE", command, jsonData);
         }
         public string Get(string command, string jsonData = null)
         {
-            return ExecuteRequest("GET", command, jsonData);
+            return ExecuteRequest(null, "GET", command, jsonData);
         }
         public string Head(string command, string jsonData = null)
         {
-            return ExecuteRequest("HEAD", command, jsonData);
+            return ExecuteRequest(null, "HEAD", command, jsonData);
         }
         public string Post(string command, string jsonData = null)
         {
-            return ExecuteRequest("Post", command, jsonData);
+            return ExecuteRequest(null, "Post", command, jsonData);
         }
         public string Put(string command, string jsonData = null)
         {
-            return ExecuteRequest("Put", command, jsonData);
+            try
+            {
+                return ExecuteRequest(null, "Put", command, jsonData);
+            }
+            catch (WebException ex)
+            {
+                if (connections.Count == index + 1) throw ex;
+                for (var i = 0; i < connections.Count; i++)
+                {
+                    if (i == index) continue;
+
+                }
+
+            }
+            return "";
         }
-        private string ExecuteRequest(string method, string command, string jsonData)
+        private string ExecuteRequest(string url, string method, string command, string jsonData)
         {
             try
             {
-                string uri = connections[random.Next(connections.Count())];
+                index = random.Next(connections.Count());
+                string uri = url ?? connections[index.Value];
                 uri = uri.TrimEnd('/') + "/" + command.TrimStart('/');
                 HttpWebRequest request = CreateRequest(method, uri);
                 if (!string.IsNullOrEmpty(jsonData))
