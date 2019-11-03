@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,90 +11,81 @@ namespace ElasticLite.Client
     public class ElasticConnection
     {
         private Random random = new Random();
-        public List<string> connections = new List<string>();
-        public List<Uri> uri = new List<Uri>();
-        public int? index = null;
+        public static Queue<string> connections = null;
+        public int count = 0;
+        public int Timeout { get; set; }
+        public ICredentials Credentials { get; set; }
+        public IWebProxy Proxy { get; set; }
         public ElasticConnection(string url, int timeout = 6000)
         {
-            uri.Add(new Uri(url));
-            connections.Add(url);
+            if (connections == null)
+                connections = new Queue<string>(new List<string>() { url });
+            count = 1;
             Timeout = timeout;
         }
         public ElasticConnection(IEnumerable<string> urls, int timeout = 6000)
         {
-            foreach (string url in urls)
-            {
-                uri.Add(new Uri(url));
-                connections.Add(url);
-            }
+            if (connections == null)
+                connections = new Queue<string>(urls);
+            Timeout = timeout;
+            count = connections.Count;
         }
-        /// <summary>
-        /// Timeout in milliseconds Default 6000ms=6s
-        /// </summary>
-        public int Timeout { get; set; }
-        public ICredentials Credentials { get; set; }
-        public IWebProxy Proxy { get; set; }
         public string Delete(string command, string jsonData = null)
         {
-            return ExecuteRequest(null, "DELETE", command, jsonData);
+            return ExecuteRequest("DELETE", command, jsonData);
         }
         public string Get(string command, string jsonData = null)
         {
-            return ExecuteRequest(null, "GET", command, jsonData);
+            return ExecuteRequest("GET", command, jsonData);
         }
         public string Head(string command, string jsonData = null)
         {
-            return ExecuteRequest(null, "HEAD", command, jsonData);
+            return ExecuteRequest("HEAD", command, jsonData);
         }
         public string Post(string command, string jsonData = null)
         {
-            return ExecuteRequest(null, "Post", command, jsonData);
+            return ExecuteRequest("Post", command, jsonData);
         }
         public string Put(string command, string jsonData = null)
         {
-            try
-            {
-                return ExecuteRequest(null, "Put", command, jsonData);
-            }
-            catch (WebException ex)
-            {
-                if (connections.Count == index + 1) throw ex;
-                for (var i = 0; i < connections.Count; i++)
-                {
-                    if (i == index) continue;
-
-                }
-
-            }
-            return "";
+            return ExecuteRequest("Put", command, jsonData);
         }
-        private string ExecuteRequest(string url, string method, string command, string jsonData)
+        private string ExecuteRequest(string method, string command, string jsonData)
         {
-            try
+            for (var i = 0; i < count; i++)
             {
-                index = random.Next(connections.Count());
-                string uri = url ?? connections[index.Value];
+                //从队列获取一个连接
+                string uri = connections.Peek();
                 uri = uri.TrimEnd('/') + "/" + command.TrimStart('/');
-                HttpWebRequest request = CreateRequest(method, uri);
-                if (!string.IsNullOrEmpty(jsonData))
+                try
                 {
-                    byte[] buffer = Encoding.UTF8.GetBytes(jsonData);
-                    request.ContentLength = buffer.Length;
-                    using (Stream requestStream = request.GetRequestStream())
+                    HttpWebRequest request = CreateRequest(method, uri);
+                    if (!string.IsNullOrEmpty(jsonData))
                     {
-                        requestStream.Write(buffer, 0, buffer.Length);
+                        byte[] buffer = Encoding.UTF8.GetBytes(jsonData);
+                        request.ContentLength = buffer.Length;
+                        using (Stream requestStream = request.GetRequestStream())
+                        {
+                            requestStream.Write(buffer, 0, buffer.Length);
+                        }
+                    }
+                    using (WebResponse response = request.GetResponse())
+                    {
+                        string result = new StreamReader(response.GetResponseStream()).ReadToEnd();
+                        return result;
                     }
                 }
-                using (WebResponse response = request.GetResponse())
+                catch (WebException ex)
                 {
-                    string result = new StreamReader(response.GetResponseStream()).ReadToEnd();
-                    return result;
+                    //从队列获取的连接不可用
+                    string unuseConnect = connections.Dequeue();
+                    //把不可用的连接放入队尾
+                    connections.Enqueue(unuseConnect);
+                    //通知维护人员
+                    //...
                 }
             }
-            catch (WebException ex)
-            {
-                throw ex;
-            }
+            throw new WebException("all connections are unreachable");
         }
         protected virtual HttpWebRequest CreateRequest(string method, string uri)
         {
