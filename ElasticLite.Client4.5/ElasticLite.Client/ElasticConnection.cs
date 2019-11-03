@@ -10,7 +10,6 @@ namespace ElasticLite.Client
 {
     public class ElasticConnection
     {
-        private Random random = new Random();
         public static Queue<string> connections = null;
         public int count = 0;
         public int Timeout { get; set; }
@@ -27,8 +26,8 @@ namespace ElasticLite.Client
         {
             if (connections == null)
                 connections = new Queue<string>(urls);
-            Timeout = timeout;
             count = connections.Count;
+            Timeout = timeout;
         }
         public string Delete(string command, string jsonData = null)
         {
