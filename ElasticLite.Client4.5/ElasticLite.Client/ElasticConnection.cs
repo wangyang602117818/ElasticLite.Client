@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mail;
 using System.Text;
 
 namespace ElasticLite.Client
@@ -15,6 +16,11 @@ namespace ElasticLite.Client
         public int Timeout { get; set; }
         public ICredentials Credentials { get; set; }
         public IWebProxy Proxy { get; set; }
+        public SmtpClient SmtpClient { get; set; }
+        public string MailSender { get; set; }
+        public IEnumerable<string> MailTo { get; set; }
+        public string Subject { get; set; }
+        public static string date = DateTime.Now.ToString("yyyyMMddHH");
         public ElasticConnection(string url, int timeout = 6000)
         {
             if (connections == null)
@@ -29,6 +35,7 @@ namespace ElasticLite.Client
             count = connections.Count;
             Timeout = timeout;
         }
+
         public string Delete(string command, string jsonData = null)
         {
             return ExecuteRequest("DELETE", command, jsonData);
@@ -37,9 +44,10 @@ namespace ElasticLite.Client
         {
             return ExecuteRequest("GET", command, jsonData);
         }
-        public string Head(string command, string jsonData = null)
+        public bool Head(string command, string jsonData = null)
         {
-            return ExecuteRequest("HEAD", command, jsonData);
+            var result = ExecuteRequest("HEAD", command, jsonData);
+            return result == "404" ? false : true;
         }
         public string Post(string command, string jsonData = null)
         {
@@ -51,6 +59,7 @@ namespace ElasticLite.Client
         }
         private string ExecuteRequest(string method, string command, string jsonData)
         {
+            WebException ex = null;
             for (var i = 0; i < count; i++)
             {
                 //从队列获取一个连接
@@ -68,23 +77,43 @@ namespace ElasticLite.Client
                             requestStream.Write(buffer, 0, buffer.Length);
                         }
                     }
-                    using (WebResponse response = request.GetResponse())
+                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                     {
-                        string result = new StreamReader(response.GetResponseStream()).ReadToEnd();
-                        return result;
+                        using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+                        {
+                            return reader.ReadToEnd();
+                        }
                     }
                 }
-                catch (WebException ex)
+                catch (WebException webException)
                 {
+                    if (webException.Response != null && ((HttpWebResponse)webException.Response).StatusCode == HttpStatusCode.NotFound) return "404";
                     //从队列获取的连接不可用
                     string unuseConnect = connections.Dequeue();
                     //把不可用的连接放入队尾
                     connections.Enqueue(unuseConnect);
                     //通知维护人员
-                    //...
+                    if (SmtpClient != null) SendEmail(webException.Message);
+                    ex = webException;
                 }
             }
-            throw new WebException("all connections are unreachable");
+            throw ex;
+        }
+        private void SendEmail(string message)
+        {
+            if (DateTime.Now.ToString("yyyyMMddHH") != date)
+            {
+                date = DateTime.Now.ToString("yyyyMMddHH");
+                MailMessage mailMessage = new MailMessage()
+                {
+                    From = new MailAddress(MailSender),
+                    Body = message,
+                    Subject = Subject,
+                    IsBodyHtml = false
+                };
+                Array.ForEach(MailTo.ToArray(), t => mailMessage.To.Add(t));
+                SmtpClient.Send(mailMessage);
+            }
         }
         protected virtual HttpWebRequest CreateRequest(string method, string uri)
         {

@@ -44,5 +44,9 @@
     <Compile Include="ElasticConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="ElasticLite.Client.nuspec" />
+    <None Include="publish to nuget" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

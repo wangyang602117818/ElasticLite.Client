@@ -1,0 +1,15 @@
+﻿第一步：修改版本号
+    1.AssemblyInfo 里面的版本号（dll内部的版本号）
+	2.FileService.Client.nuspec 里面的版本号（nuget的版本号）
+	3.FileService.Client.nuspec 里面的发布消息
+
+第二步：打包，并且生成类似 FileService.Client.1.0.0.0.nupkg 包文件
+	nuget pack ElasticLite.Client.csproj
+
+第三步：发布|发布新版本
+    nuget push ElasticLite.Client.1.0.0.nupkg oy2cc5ymo6bta7hwf66qd757em3cnfmuxh5nxvr74yapja -Source https://www.nuget.org/api/v2/package
+
+
+
+
+

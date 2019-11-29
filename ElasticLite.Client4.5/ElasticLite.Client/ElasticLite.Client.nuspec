@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>ElasticLite.Client</id>
+    <version>1.0.1</version>
+    <title>ElasticLite.Client</title>
+    <authors>Wang Yang</authors>
+    <owners>Wang Yang</owners>
+    <projectUrl>https://github.com/wangyang602117818/FileService.Client/</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>该程序操作 ElasticSearch</description>
+    <releaseNotes>
+      改变描述
+    </releaseNotes>
+    <copyright>Copyright 2017-10-09</copyright>
+    <tags>ElasticLite.Client</tags>
+  </metadata>
+</package>
