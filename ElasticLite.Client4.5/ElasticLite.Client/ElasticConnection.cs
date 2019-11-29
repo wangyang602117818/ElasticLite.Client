@@ -35,7 +35,6 @@ namespace ElasticLite.Client
             count = connections.Count;
             Timeout = timeout;
         }
-
         public string Delete(string command, string jsonData = null)
         {
             return ExecuteRequest("DELETE", command, jsonData);
