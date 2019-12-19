@@ -28,9 +28,9 @@ ElasticConnection elasticConnection = new ElasticConnection(urls);
 
     var result = elasticConnection.Delete("person/doc/1");
 
->   if (result.Contains("\\"successful\\":1")) return true;
+    if (result.Contains("\\"successful\\":1")) return true;
 
-1.  搜索数据:
+5.  搜索数据:
 
     var result = elasticConnection.Post(indexName, json);
 
@@ -40,6 +40,6 @@ ElasticConnection elasticConnection = new ElasticConnection(urls);
     "/_search?filter_path=hits.total,hits.hits._source,hits.hits._id,hits.hits.highlight",
     json);
 
-2.  更新数据最佳实践:
+6.  更新数据最佳实践:
 
     确保id一致使用索引接口来修改
